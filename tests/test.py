@@ -79,11 +79,13 @@ def test_get_preferred(four_character_game):
     assert normal_bob.get_preferred() == normal_amy
      
 def test_become_closer_opposites(introvert_cas, extrovert_dan):
+    introvert_cas._add_attraction(extrovert_dan)
     introvert_cas.become_closer(extrovert_dan, 'extraversion_intraversion')
     assert introvert_cas.stats.extraversion_intraversion == 4
     assert extrovert_dan.stats.extraversion_intraversion == -4
 
 def test_increase_distaste_sames(normal_bob, normal_amy):
+    normal_bob._add_attraction(normal_amy)
     normal_bob.increase_distaste(normal_amy, 'emotion_intelligence')
     assert normal_bob.stats.emotion_intelligence == -1
     assert normal_amy.stats.emotion_intelligence == 1

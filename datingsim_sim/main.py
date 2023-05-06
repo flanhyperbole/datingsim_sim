@@ -142,14 +142,22 @@ class Character:
         attraction = 0
         for stat_compare in zip(self.stats.get_stat_iter(), other.stats.get_stat_iter()):
             stat_diff = abs(stat_compare[0] - stat_compare[1])
+            print(f"got {stat_diff} from {stat_compare} => {10 - stat_diff}")
             attraction += (10 - stat_diff)
+        if attraction > 30 or attraction < 0:
+            if not self.game.allow_yandare:
+                attraction = 30 if attraction > 30 else 0
         self.attraction[other.name] = attraction
 
     def become_closer(self, other, statblock, amount = 1):
+        if amount == 0:
+            return ""
         self.adjust_relationship(other, statblock, amount, adjustment = 'positive')
         return f"{self.name} became closer with {other.name}!"
 
     def increase_distaste(self, other, statblock, amount = 1):
+        if amount == 0:
+            return ""
         self.adjust_relationship(other, statblock, amount, adjustment = 'negative')
         return f"{self.name}'s distate for {other.name} bacame more pronounced..."
     
@@ -157,13 +165,19 @@ class Character:
         # if both on same end of spectrum the lower moves to the extreme,
         #if on opposite sides both character move towards the center
         print()
-        print('before relation adjust')
-        print(f"{self.name}.arraction[{other.name}] = {self.attraction['other.name']}")
+        print(f'before relation adjust of {amount}')
+        print(f"{self.name}.attraction[{other.name}] = {self.attraction[other.name]}")
         symbolA, symbolB = ('+', '-') if adjustment == 'positive' else ('-', '+')
+        
+        
         self_stat = getattr(self.stats, statblock)
         other_stat = getattr(other.stats, statblock)
+        print(f"{self_stat=}")
+        print(f"{other_stat=}")
+        
         set_self_stat = lambda x: setattr(self.stats, statblock, x)
         set_other_stat = lambda x: setattr(other.stats, statblock, x)
+
 
         if self_stat == other_stat:
             if adjustment != 'positive':
@@ -173,6 +187,7 @@ class Character:
                 #no changes necessary
                 pass
         elif (self_stat > 0 > other_stat) or (self_stat < 0 < other_stat):
+            print('opposings')
             if self_stat > 0:
                 set_self_stat(eval(f"{self_stat} {symbolB} {amount}"))
                 set_other_stat(eval(f"{other_stat} {symbolA} {amount}"))
@@ -180,6 +195,7 @@ class Character:
                 set_self_stat(eval(f"{self_stat} {symbolA} {amount}"))
                 set_other_stat(eval(f"{other_stat} {symbolB} {amount}"))
         else:
+            print('in the same way')
             if abs(self_stat) > abs(other_stat):
                 if self_stat > 0:
                     set_other_stat(eval(f"{other_stat} {symbolA} {amount}"))
@@ -190,9 +206,15 @@ class Character:
                     set_self_stat(eval(f"{self_stat} {symbolA} {amount}"))
                 else:
                     set_self_stat(eval(f"{self_stat} {symbolB} {amount}"))
+
+        self_stat = getattr(self.stats, statblock)
+        other_stat = getattr(other.stats, statblock)
+        print(f"{self_stat=}")
+        print(f"{other_stat=}")
+        
         self.calculate_attraction(other)
         print('after relation adjust')
-        print(f"self.arraction[{other.name}] = {self.attraction['other.name']}")
+        print(f"{self.name}.attraction[{other.name}] = {self.attraction[other.name]}")
                 
                 
 #%%
@@ -201,6 +223,7 @@ class Game:
     def __init__(self, prompt=True):
         self.characters = {}
         self.round = 0
+        self.allow_yandare = False
         if prompt:
             while True:
                 if len(self.characters) < 3:
@@ -240,11 +263,11 @@ class Game:
 # 1 in 10 chance to accidentially repulse fav, or attract enemy
   
 class Event:
-    D4 = [i for i in range(1, 5)]
-    D10 = [i for i in range(1, 11)]
-    D20 = [i for i in range(1, 21)]
+    D4 =  list(range(1, 5))
+    D10 = list(range(1, 11))
+    D20 = list(range(1, 21))
 
-    def __int__(self):
+    def __init__(self):
         self.name = None
         self.desc = None
         
@@ -259,7 +282,7 @@ class Event:
         self.stat_amounts = (3, 1, 0)
         self.game = None
 
-        self.desc_result = None
+        self.desc_result = ""
 
     @classmethod
     def from_json(cls):
@@ -295,7 +318,7 @@ class Event:
         self_stat = getattr(character.stats, statblock)
         attract = True if self_stat >= 0 else False
         result = sum([self.roll(Event.D4) for _ in range(0, abs(self_stat))])
-        args = [character, statblock, self_stat, preferred, attract]
+        args = [character, statblock, preferred, attract]
         print(f"""
             {character.name} event
             {preferred=}
@@ -308,22 +331,21 @@ class Event:
         else:
             self.affect(*args, amount=self.stat_amounts[1], desc=self.desc_normal)
         
-    def affect(self, character, statblock, self_stat, preferred, attract, amount, desc):
+    def affect(self, character, statblock, preferred, attract, amount, desc):
         other = character.get_preferred() if preferred else character.get_least_preferred()
-        stat_res = (self_stat - amount) if self_stat < 0 else (self_stat + amount)
         self.add_result(desc.format(self_name = character.name, other_name = other.name))
-        setattr(character.stats, statblock, stat_res)
         match attract:
             case True:
-                character.become_closer(other, statblock, amount)
+                self.add_result(character.become_closer(other, statblock, amount))
             case False:
-                character.increase_distaste(other, statblock, amount)
+                self.add_result(character.increase_distaste(other, statblock, amount))
 
     def sabotage(self, character):
         pass         
 
     def add_result(self, desc):
         self.desc_result += f"\n{desc}"    
+
     def results(self):
         return self.desc_result
 
