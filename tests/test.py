@@ -56,6 +56,10 @@ def test_normals_have_equal_stats(normal_bob, normal_amy):
     for stat_compare in zip(normal_bob.stats.get_stat_iter(), normal_amy.stats.get_stat_iter()):
         assert stat_compare[0] == stat_compare[1]
 
+def test_calculate_attraction(normal_bob, normal_amy, introvert_cas):
+    assert normal_bob.calculate_attraction(normal_amy) == normal_amy.calculate_attraction(normal_bob)
+    assert introvert_cas.calculate_attraction(normal_amy) == normal_amy.calculate_attraction(introvert_cas)
+
 def test_setup_attraction(four_character_game):
     four_character_game._set_initial_attraction()
     assert 'normal_amy' in four_character_game.characters['normal_bob'].attraction

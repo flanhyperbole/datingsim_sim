@@ -141,7 +141,7 @@ class Character:
         #total attraction is the inverse of the distance between two characters stats
         attraction = 0
         for stat_compare in zip(self.stats.get_stat_iter(), other.stats.get_stat_iter()):
-            stat_diff = stat_compare[0] - stat_compare[1]
+            stat_diff = abs(stat_compare[0] - stat_compare[1])
             attraction += (10 - stat_diff)
         self.attraction[other.name] = attraction
 
@@ -299,18 +299,21 @@ class Event:
     def affect(self, character, statblock, self_stat, preferred, attract, amount, desc):
         other = character.get_preferred() if preferred else character.get_least_preferred()
         stat_res = (self_stat - amount) if self_stat < 0 else (self_stat + amount)
+        print()
+        print(character.name, statblock, self_stat, preferred, attract, amount)
         print(desc.format(self_name = character.name, other_name = other.name))
         setattr(character.stats, statblock, stat_res)
         match attract:
             case True:
                 character.become_closer(other, statblock, amount)
             case False:
-                character.increase_distance(other, statblock, amount)
+                character.increase_distaste(other, statblock, amount)
 
-    def sabotage(self):
+    def sabotage(self, character):
         pass         
             
-
+    def results(self):
+        pass
 
             
 
