@@ -142,7 +142,7 @@ class Character:
         attraction = 0
         for stat_compare in zip(self.stats.get_stat_iter(), other.stats.get_stat_iter()):
             stat_diff = abs(stat_compare[0] - stat_compare[1])
-            print(f"got {stat_diff} from {stat_compare} => {10 - stat_diff}")
+            # print(f"got {stat_diff} from {stat_compare} => {10 - stat_diff}")
             attraction += (10 - stat_diff)
         if attraction > 30 or attraction < 0:
             if not self.game.allow_yandare:
@@ -164,20 +164,12 @@ class Character:
     def adjust_relationship(self, other, statblock, amount, adjustment):
         # if both on same end of spectrum the lower moves to the extreme,
         #if on opposite sides both character move towards the center
-        print()
-        print(f'before relation adjust of {amount}')
-        print(f"{self.name}.attraction[{other.name}] = {self.attraction[other.name]}")
         symbolA, symbolB = ('+', '-') if adjustment == 'positive' else ('-', '+')
-        
         
         self_stat = getattr(self.stats, statblock)
         other_stat = getattr(other.stats, statblock)
-        print(f"{self_stat=}")
-        print(f"{other_stat=}")
-        
         set_self_stat = lambda x: setattr(self.stats, statblock, x)
         set_other_stat = lambda x: setattr(other.stats, statblock, x)
-
 
         if self_stat == other_stat:
             if adjustment != 'positive':
@@ -187,7 +179,6 @@ class Character:
                 #no changes necessary
                 pass
         elif (self_stat > 0 > other_stat) or (self_stat < 0 < other_stat):
-            print('opposings')
             if self_stat > 0:
                 set_self_stat(eval(f"{self_stat} {symbolB} {amount}"))
                 set_other_stat(eval(f"{other_stat} {symbolA} {amount}"))
@@ -195,7 +186,6 @@ class Character:
                 set_self_stat(eval(f"{self_stat} {symbolA} {amount}"))
                 set_other_stat(eval(f"{other_stat} {symbolB} {amount}"))
         else:
-            print('in the same way')
             if abs(self_stat) > abs(other_stat):
                 if self_stat > 0:
                     set_other_stat(eval(f"{other_stat} {symbolA} {amount}"))
@@ -207,14 +197,7 @@ class Character:
                 else:
                     set_self_stat(eval(f"{self_stat} {symbolB} {amount}"))
 
-        self_stat = getattr(self.stats, statblock)
-        other_stat = getattr(other.stats, statblock)
-        print(f"{self_stat=}")
-        print(f"{other_stat=}")
-        
         self.calculate_attraction(other)
-        print('after relation adjust')
-        print(f"{self.name}.attraction[{other.name}] = {self.attraction[other.name]}")
                 
                 
 #%%
@@ -234,6 +217,8 @@ class Game:
                         self.add_character()
                     else:
                         break
+        self.event_count = 10
+        self.events = []
 
     def _set_initial_attraction(self):        
         for character_name, character in self.characters.items():
@@ -247,6 +232,44 @@ class Game:
     def add_character(self):
         name = input(f'charater {len(self.characters) + 1} name:')
         self.characters[name] = Character(name) 
+
+    def end_game(self):
+        # at game end each character has a chance to confess their emotions
+        # to another character. Chances of success are attraction / 32, where
+        # there is always one bad end and a great end
+        # how to sort...
+        paired = []
+        action_list = self.get_sort()
+        # action_list = self.compute_poly(action_list)
+        pass
+
+    def get_sort(self):
+        res = {}
+        for character_name, character in self.characters.items():
+            for other_name, other_score in character.attraction.items():
+                others_score_for_character = self.characters[other_name].attraction[character_name]
+                total_score = other_score + others_score_for_character
+                _key = "|".join(sorted([character_name, other_name]))
+                res[_key] = total_score
+        res = self.compute_poly(res)
+        res_sort = {k: v for k, v in sorted(res.items(), key=lambda item: item[1], reverse=True)}
+        #compute poly
+        return res_sort
+
+    def compute_poly(self, action_list):
+        scores = list(action_list.values())
+        for score in scores:
+            if scores.count(score) > 1:
+                candidites = [i for k,v in action_list.items() for i in k.split('|') if v == score]
+                canidate_count = [candidites.count(c) for c in candidites]
+                if len(set(canidate_count)) == 1:
+                    polyset = "|".join(sorted(list(set(candidites))))
+                    action_list = {k:v for k,v in action_list.items() if v != score}
+                    action_list[polyset] = score
+        return action_list
+
+
+        
 
 #%%
 
@@ -279,6 +302,7 @@ class Event:
         self.character_number = None
         self.characters = None
         self.stat_affects = None
+        self.stat_positive = True
         self.stat_amounts = (3, 1, 0)
         self.game = None
 
@@ -289,8 +313,8 @@ class Event:
         pass
 
     def event_run(self):
-        print(self.name)
-        print(self.desc)
+        self.add_result(self.name)
+        self.add_result(self.desc)
         self.affecting_characters()
         self.each_characters()
         self.results()    
@@ -317,13 +341,15 @@ class Event:
     def event_result(self, character, statblock, preferred):
         self_stat = getattr(character.stats, statblock)
         attract = True if self_stat >= 0 else False
+        attract = attract if self.stat_positive else not(attract)
         result = sum([self.roll(Event.D4) for _ in range(0, abs(self_stat))])
         args = [character, statblock, preferred, attract]
-        print(f"""
-            {character.name} event
-            {preferred=}
-            {attract=}
-        """)
+        # print(f"""
+        #     {character.name} event
+        #     {preferred=}
+        #     {attract=}
+        #     {result=}
+        # """)
         if result > 15:
             self.affect(*args, amount=self.stat_amounts[0], desc=self.desc_success)
         elif result < 5:
