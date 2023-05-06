@@ -48,6 +48,10 @@ def test_statbar_display():
     statbar = Stats.statbar(3)
     assert statbar == '[.....||||..]'
 
+def test_statbar_error_display():
+    statbar = Stats.statbar(-6)
+    assert statbar == "[...ERROR...]" 
+
 def test_normals_have_equal_stats(normal_bob, normal_amy):
     for stat_compare in zip(normal_bob.stats.get_stat_iter(), normal_amy.stats.get_stat_iter()):
         assert stat_compare[0] == stat_compare[1]
@@ -56,7 +60,29 @@ def test_setup_attraction(four_character_game):
     four_character_game._set_initial_attraction()
     assert 'normal_amy' in four_character_game.characters['normal_bob'].attraction
     assert four_character_game.characters['normal_bob'].attraction['normal_amy'] == 30
+    assert four_character_game.characters['normal_amy'].attraction['normal_bob'] == 30
     assert four_character_game.characters['introvert_cas'].attraction['extrovert_dan'] == 0
+    assert four_character_game.characters['extrovert_dan'].attraction['introvert_cas'] == 0
     assert four_character_game.characters['introvert_cas'].attraction['normal_amy'] == 15
+
+def test_get_preferred(four_character_game):
+    four_character_game._set_initial_attraction()
+    normal_bob = four_character_game.characters['normal_bob']
+    normal_amy = four_character_game.characters['normal_amy']
+    print('8'*88)
+    print(normal_bob.get_preferred())
+    print(normal_bob.attraction)
+    assert normal_bob.get_preferred() == normal_amy
      
+def test_become_closer_opposites(introvert_cas, extrovert_dan):
+    introvert_cas.become_closer(extrovert_dan, 'extraversion_intraversion')
+    assert introvert_cas.stats.extraversion_intraversion == 4
+    assert extrovert_dan.stats.extraversion_intraversion == -4
+
+def test_increase_distaste_sames(normal_bob, normal_amy):
+    normal_bob.increase_distaste(normal_amy, 'emotion_intelligence')
+    assert normal_bob.stats.emotion_intelligence == -1
+    assert normal_amy.stats.emotion_intelligence == 1
+
+    
 
