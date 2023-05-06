@@ -146,16 +146,19 @@ class Character:
         self.attraction[other.name] = attraction
 
     def become_closer(self, other, statblock, amount = 1):
-        print(f"{self.name} became closer with {other.name}!")
         self.adjust_relationship(other, statblock, amount, adjustment = 'positive')
+        return f"{self.name} became closer with {other.name}!"
 
     def increase_distaste(self, other, statblock, amount = 1):
-        print(f"{self.name}'s distate for {other.name} bacame more pronounced...")
         self.adjust_relationship(other, statblock, amount, adjustment = 'negative')
+        return f"{self.name}'s distate for {other.name} bacame more pronounced..."
     
     def adjust_relationship(self, other, statblock, amount, adjustment):
         # if both on same end of spectrum the lower moves to the extreme,
         #if on opposite sides both character move towards the center
+        print()
+        print('before relation adjust')
+        print(f"{self.name}.arraction[{other.name}] = {self.attraction['other.name']}")
         symbolA, symbolB = ('+', '-') if adjustment == 'positive' else ('-', '+')
         self_stat = getattr(self.stats, statblock)
         other_stat = getattr(other.stats, statblock)
@@ -188,6 +191,8 @@ class Character:
                 else:
                     set_self_stat(eval(f"{self_stat} {symbolB} {amount}"))
         self.calculate_attraction(other)
+        print('after relation adjust')
+        print(f"self.arraction[{other.name}] = {self.attraction['other.name']}")
                 
                 
 #%%
@@ -254,6 +259,8 @@ class Event:
         self.stat_amounts = (3, 1, 0)
         self.game = None
 
+        self.desc_result = None
+
     @classmethod
     def from_json(cls):
         pass
@@ -289,6 +296,11 @@ class Event:
         attract = True if self_stat >= 0 else False
         result = sum([self.roll(Event.D4) for _ in range(0, abs(self_stat))])
         args = [character, statblock, self_stat, preferred, attract]
+        print(f"""
+            {character.name} event
+            {preferred=}
+            {attract=}
+        """)
         if result > 15:
             self.affect(*args, amount=self.stat_amounts[0], desc=self.desc_success)
         elif result < 5:
@@ -299,9 +311,7 @@ class Event:
     def affect(self, character, statblock, self_stat, preferred, attract, amount, desc):
         other = character.get_preferred() if preferred else character.get_least_preferred()
         stat_res = (self_stat - amount) if self_stat < 0 else (self_stat + amount)
-        print()
-        print(character.name, statblock, self_stat, preferred, attract, amount)
-        print(desc.format(self_name = character.name, other_name = other.name))
+        self.add_result(desc.format(self_name = character.name, other_name = other.name))
         setattr(character.stats, statblock, stat_res)
         match attract:
             case True:
@@ -311,9 +321,11 @@ class Event:
 
     def sabotage(self, character):
         pass         
-            
+
+    def add_result(self, desc):
+        self.desc_result += f"\n{desc}"    
     def results(self):
-        pass
+        return self.desc_result
 
             
 
